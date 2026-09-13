@@ -1,10 +1,12 @@
 // Northstar v1 - synthetic seed data.
 // Goal: Become a CTO. Replace with real courses/notes as you go.
-import type { Course } from "./types";
+import type { Course, Goal } from "./types";
 
-export const NORTHSTAR_GOAL = "Become a CTO";
+export const CTO_GOAL_ID = "become-a-cto";
 
-export const NORTHSTAR_COURSES: Course[] = [
+export const INITIAL_GOALS: Goal[] = [{ id: CTO_GOAL_ID, name: "Become a CTO" }];
+
+const CTO_COURSES: Omit<Course, "goalId">[] = [
   {
     category: "Technical Leadership",
     name: "Engineering Leadership: From Manager to Director",
@@ -162,3 +164,8 @@ export const NORTHSTAR_COURSES: Course[] = [
       "Executive cohort course - case studies are directly relevant to our build-vs-buy debates.",
   },
 ];
+
+export const NORTHSTAR_COURSES: Course[] = CTO_COURSES.map((course) => ({
+  ...course,
+  goalId: CTO_GOAL_ID,
+}));
