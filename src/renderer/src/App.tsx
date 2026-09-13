@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import Header from "./components/Header";
-import Summary from "./components/Summary";
-import CategorySection from "./components/CategorySection";
-import { NORTHSTAR_GOAL, NORTHSTAR_COURSES } from "./data";
+import Header from "@/components/Header";
+import Summary from "@/components/Summary";
+import CategorySection from "@/components/CategorySection";
+import { NORTHSTAR_GOAL, NORTHSTAR_COURSES } from "@/data";
 
 export default function App(): JSX.Element {
   const categories = useMemo(
@@ -11,7 +11,7 @@ export default function App(): JSX.Element {
   );
 
   return (
-    <div className="page">
+    <div className="mx-auto max-w-[1040px] px-6 py-16">
       <Header goal={NORTHSTAR_GOAL} />
       <Summary courses={NORTHSTAR_COURSES} />
       <main>
@@ -23,7 +23,7 @@ export default function App(): JSX.Element {
           />
         ))}
       </main>
-      <p className="footer-note">Seeded with sample data · v1</p>
+      <p className="mt-10 text-center text-xs text-muted-foreground">Seeded with sample data · v1</p>
     </div>
   );
 }

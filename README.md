@@ -3,7 +3,9 @@
 Learn with purpose. Build with intention. Move toward your North Star.
 
 A personal learning & growth tracker, now a TypeScript desktop app (Electron
-+ React) built with `electron-vite`.
++ React) built with `electron-vite`, styled with Tailwind CSS and shadcn/ui
+components, icons from lucide-react, and course tables powered by
+TanStack Table.
 
 ## Features
 
@@ -38,4 +40,10 @@ npm run dist    # package as a distributable desktop app
 - `src/renderer` — the React + TypeScript UI
   - `src/renderer/src/data.ts` — the course data (`NORTHSTAR_GOAL`,
     `NORTHSTAR_COURSES`) — edit this to reflect your real courses
-  - `src/renderer/src/components` — Header, Summary, CategorySection
+  - `src/renderer/src/components` — Header, Summary, CategorySection,
+    CourseTable (TanStack Table), StatusBadge
+  - `src/renderer/src/components/ui` — shadcn/ui primitives (Button, Badge,
+    Card, Table)
+  - `src/renderer/src/lib/utils.ts` — `cn()` class-merging helper
+  - `tailwind.config.js` — design tokens (colors, radius) as CSS variables
+    in `src/renderer/src/styles.css`

@@ -1,6 +1,8 @@
 import { useMemo } from "react";
-import type { Course } from "../types";
-import { parseHours } from "../utils";
+import { CheckCircle2, Clock, Hourglass, Timer } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import type { Course } from "@/types";
+import { parseHours } from "@/utils";
 
 interface SummaryProps {
   courses: Course[];
@@ -15,20 +17,27 @@ export default function Summary({ courses }: SummaryProps): JSX.Element {
     const remainingHours = totalHours - completedHours;
 
     return [
-      { value: `${completed.length} / ${courses.length}`, label: "Courses completed" },
-      { value: String(inProgress.length), label: "In progress" },
-      { value: `${Math.round(completedHours)}h`, label: "Hours logged" },
-      { value: `${Math.round(remainingHours)}h`, label: "Hours remaining" },
+      {
+        icon: CheckCircle2,
+        value: `${completed.length} / ${courses.length}`,
+        label: "Courses completed",
+      },
+      { icon: Clock, value: String(inProgress.length), label: "In progress" },
+      { icon: Timer, value: `${Math.round(completedHours)}h`, label: "Hours logged" },
+      { icon: Hourglass, value: `${Math.round(remainingHours)}h`, label: "Hours remaining" },
     ];
   }, [courses]);
 
   return (
-    <section className="summary">
+    <section className="mb-14 grid grid-cols-2 gap-3 md:grid-cols-4">
       {stats.map((stat) => (
-        <div className="stat" key={stat.label}>
-          <div className="value">{stat.value}</div>
-          <div className="label">{stat.label}</div>
-        </div>
+        <Card key={stat.label}>
+          <CardContent className="flex flex-col gap-2 p-5">
+            <stat.icon className="size-4 text-muted-foreground" />
+            <div className="text-2xl font-semibold tracking-tight">{stat.value}</div>
+            <div className="text-xs text-muted-foreground">{stat.label}</div>
+          </CardContent>
+        </Card>
       ))}
     </section>
   );
