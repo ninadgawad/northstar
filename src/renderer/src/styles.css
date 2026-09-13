@@ -32,6 +32,9 @@
     --warning: 37 43% 40%;
     --warning-foreground: 0 0% 100%;
 
+    --destructive: 4 60% 45%;
+    --destructive-foreground: 0 0% 100%;
+
     --radius: 0.875rem;
   }
 }

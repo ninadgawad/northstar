@@ -25,9 +25,8 @@ interface TaskDrawerProps {
   course: Course | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStatusChange: (courseName: string, status: CourseStatus) => void;
-  note: string;
-  onSaveNote: (courseName: string, note: string) => void;
+  onStatusChange: (courseId: number, status: CourseStatus) => void;
+  onSaveNote: (courseId: number, note: string) => void;
 }
 
 export default function TaskDrawer({
@@ -35,25 +34,24 @@ export default function TaskDrawer({
   open,
   onOpenChange,
   onStatusChange,
-  note,
   onSaveNote,
 }: TaskDrawerProps): JSX.Element {
-  const [draftNote, setDraftNote] = useState(note);
+  const [draftNote, setDraftNote] = useState(course?.userNote ?? "");
   const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
-    setDraftNote(note);
+    setDraftNote(course?.userNote ?? "");
     setJustSaved(false);
-  }, [note, course?.name]);
+  }, [course?.id, course?.userNote]);
 
   if (!course) {
     return <></>;
   }
 
-  const isDirty = draftNote !== note;
+  const isDirty = draftNote !== course.userNote;
 
   const handleSave = (): void => {
-    onSaveNote(course.name, draftNote);
+    onSaveNote(course.id, draftNote);
     setJustSaved(true);
   };
 
@@ -86,7 +84,7 @@ export default function TaskDrawer({
                     variant={isActive ? "default" : "outline"}
                     size="sm"
                     className={cn("flex-col gap-1 h-auto py-2.5", isActive && "pointer-events-none")}
-                    onClick={() => onStatusChange(course.name, status)}
+                    onClick={() => onStatusChange(course.id, status)}
                   >
                     <Icon className="size-4" />
                     <span className="text-[11px] font-medium leading-none">{status}</span>

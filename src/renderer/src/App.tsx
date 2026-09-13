@@ -4,11 +4,8 @@ import TopBar from "@/components/TopBar";
 import DashboardView from "@/components/DashboardView";
 import AdminView from "@/components/AdminView";
 import TaskDrawer from "@/components/TaskDrawer";
-import { INITIAL_GOALS, NORTHSTAR_COURSES } from "@/data";
-import type { Course, CourseStatus, Goal } from "@/types";
+import type { Course, CourseInput, CoursePatch, CourseStatus, Goal } from "@/types";
 
-const NOTES_STORAGE_KEY = "northstar:notes";
-const GOALS_STORAGE_KEY = "northstar:goals";
 const SELECTED_GOAL_STORAGE_KEY = "northstar:selectedGoal";
 const SIDEBAR_STORAGE_KEY = "northstar:sidebarCollapsed";
 
@@ -21,24 +18,15 @@ function loadJSON<T>(key: string, fallback: T): T {
   }
 }
 
-function slugify(name: string): string {
-  const base = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-  return base || `goal-${Date.now()}`;
-}
-
 export default function App(): JSX.Element {
-  const [goals, setGoals] = useState<Goal[]>(() => loadJSON(GOALS_STORAGE_KEY, INITIAL_GOALS));
+  const [loading, setLoading] = useState(true);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState<string>(() =>
-    loadJSON(SELECTED_GOAL_STORAGE_KEY, INITIAL_GOALS[0].id)
+    loadJSON(SELECTED_GOAL_STORAGE_KEY, "")
   );
-  const [courses, setCourses] = useState<Course[]>(NORTHSTAR_COURSES);
-  const [notes, setNotes] = useState<Record<string, string>>(() => loadJSON(NOTES_STORAGE_KEY, {}));
   const [activeStatus, setActiveStatus] = useState<CourseStatus | null>(null);
-  const [selectedCourseName, setSelectedCourseName] = useState<string | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
     loadJSON(SIDEBAR_STORAGE_KEY, false)
@@ -46,12 +34,19 @@ export default function App(): JSX.Element {
   const [activeView, setActiveView] = useState<ViewId>("dashboard");
 
   useEffect(() => {
-    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
-  }, [notes]);
-
-  useEffect(() => {
-    localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goals));
-  }, [goals]);
+    (async () => {
+      const fetchedGoals = await window.api.goals.list();
+      const allCourses = (
+        await Promise.all(fetchedGoals.map((g) => window.api.courses.list(g.id)))
+      ).flat();
+      setGoals(fetchedGoals);
+      setCourses(allCourses);
+      setSelectedGoalId((prev) =>
+        fetchedGoals.some((g) => g.id === prev) ? prev : (fetchedGoals[0]?.id ?? "")
+      );
+      setLoading(false);
+    })();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(SELECTED_GOAL_STORAGE_KEY, JSON.stringify(selectedGoalId));
@@ -61,10 +56,10 @@ export default function App(): JSX.Element {
     localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  const handleAddGoal = (name: string): void => {
-    const id = slugify(name);
-    setGoals((prev) => (prev.some((g) => g.id === id) ? prev : [...prev, { id, name }]));
-    setSelectedGoalId(id);
+  const handleAddGoal = async (name: string): Promise<void> => {
+    const goal = await window.api.goals.add(name);
+    setGoals((prev) => [...prev, goal]);
+    setSelectedGoalId(goal.id);
     setActiveView("dashboard");
   };
 
@@ -73,30 +68,47 @@ export default function App(): JSX.Element {
   };
 
   const handleRowClick = (course: Course): void => {
-    setSelectedCourseName(course.name);
+    setSelectedCourseId(course.id);
     setDrawerOpen(true);
   };
 
-  const handleCourseStatusChange = (courseName: string, status: CourseStatus): void => {
-    setCourses((prev) =>
-      prev.map((c) => {
-        if (c.name !== courseName) return c;
-        if (status === "Completed" && !c.lastCompleted) {
-          return { ...c, status, lastCompleted: new Date().toISOString().slice(0, 10) };
-        }
-        if (status === "Not Started") {
-          return { ...c, status, lastCompleted: null };
-        }
-        return { ...c, status };
-      })
+  const handleUpdateCourse = async (id: number, patch: CoursePatch): Promise<void> => {
+    const finalPatch: CoursePatch = { ...patch };
+    if (patch.status && !("lastCompleted" in patch)) {
+      const current = courses.find((c) => c.id === id);
+      if (patch.status === "Completed" && !current?.lastCompleted) {
+        finalPatch.lastCompleted = new Date().toISOString().slice(0, 10);
+      } else if (patch.status === "Not Started") {
+        finalPatch.lastCompleted = null;
+      }
+    }
+    const updated = await window.api.courses.update(id, finalPatch);
+    setCourses((prev) => prev.map((c) => (c.id === id ? updated : c)));
+  };
+
+  const handleAddCourse = async (input: CourseInput): Promise<void> => {
+    const created = await window.api.courses.add(input);
+    setCourses((prev) => [...prev, created]);
+  };
+
+  const handleDeleteCourse = async (id: number): Promise<void> => {
+    await window.api.courses.remove(id);
+    setCourses((prev) => prev.filter((c) => c.id !== id));
+    if (selectedCourseId === id) {
+      setDrawerOpen(false);
+      setSelectedCourseId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Loading Northstar…
+      </div>
     );
-  };
+  }
 
-  const handleSaveNote = (courseName: string, note: string): void => {
-    setNotes((prev) => ({ ...prev, [courseName]: note }));
-  };
-
-  const selectedCourse = courses.find((c) => c.name === selectedCourseName) ?? null;
+  const selectedCourse = courses.find((c) => c.id === selectedCourseId) ?? null;
   const goalCourses = courses.filter((c) => c.goalId === selectedGoalId);
   const selectedGoal = goals.find((g) => g.id === selectedGoalId);
 
@@ -128,7 +140,15 @@ export default function App(): JSX.Element {
               onRowClick={handleRowClick}
             />
           ) : (
-            <AdminView goals={goals} courses={courses} onAddGoal={handleAddGoal} />
+            <AdminView
+              goals={goals}
+              selectedGoal={selectedGoal}
+              courses={courses}
+              onAddGoal={handleAddGoal}
+              onAddCourse={handleAddCourse}
+              onUpdateCourse={handleUpdateCourse}
+              onDeleteCourse={handleDeleteCourse}
+            />
           )}
         </main>
       </div>
@@ -137,9 +157,8 @@ export default function App(): JSX.Element {
         course={selectedCourse}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onStatusChange={handleCourseStatusChange}
-        note={selectedCourseName ? (notes[selectedCourseName] ?? "") : ""}
-        onSaveNote={handleSaveNote}
+        onStatusChange={(id, status) => handleUpdateCourse(id, { status })}
+        onSaveNote={(id, userNote) => handleUpdateCourse(id, { userNote })}
       />
     </div>
   );

@@ -1,13 +1,13 @@
-// Northstar v1 - synthetic seed data.
-// Goal: Become a CTO. Replace with real courses/notes as you go.
-import type { Course, Goal } from "./types";
+// Northstar v1 - synthetic seed data used to populate the SQLite database on first run.
+import type { CourseInput, Goal } from "./types";
 
 export const CTO_GOAL_ID = "become-a-cto";
 
 export const INITIAL_GOALS: Goal[] = [{ id: CTO_GOAL_ID, name: "Become a CTO" }];
 
-const CTO_COURSES: Omit<Course, "goalId">[] = [
+export const INITIAL_COURSES: CourseInput[] = [
   {
+    goalId: CTO_GOAL_ID,
     category: "Technical Leadership",
     name: "Engineering Leadership: From Manager to Director",
     platform: "LinkedIn Learning",
@@ -16,8 +16,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: "2026-02-10",
     timeToComplete: "4h 30m",
     notes: "Good framework for scaling a team past ~30 engineers without losing technical depth.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Technical Leadership",
     name: "The Staff Engineer's Path",
     platform: "O'Reilly (Book)",
@@ -26,8 +28,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: null,
     timeToComplete: "8h",
     notes: "On the chapter about influence without authority. Useful for the IC-to-exec bridge.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Technical Leadership",
     name: "Architecting for Scale",
     platform: "Coursera",
@@ -36,8 +40,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: null,
     timeToComplete: "12h",
     notes: "Queued after finishing the distributed systems book below.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Cloud & Systems Architecture",
     name: "AWS Certified Solutions Architect - Professional",
     platform: "AWS Training",
@@ -47,8 +53,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     timeToComplete: "40h",
     notes:
       "Renewal due 2028. Biggest single time investment so far, worth it for credibility with infra teams.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Cloud & Systems Architecture",
     name: "Designing Data-Intensive Applications",
     platform: "O'Reilly (Book)",
@@ -58,8 +66,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     timeToComplete: "20h",
     notes:
       "Slow read but foundational - want to be able to challenge architecture proposals directly.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Cloud & Systems Architecture",
     name: "Kubernetes for Platform Engineers",
     platform: "Udemy",
@@ -68,8 +78,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: "2026-04-18",
     timeToComplete: "10h",
     notes: "Enough to have an informed opinion in platform reviews, not enough to run prod myself.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Cloud & Systems Architecture",
     name: "System Design Interview Deep Dive",
     platform: "Educative",
@@ -79,8 +91,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     timeToComplete: "15h",
     notes:
       'Useful less for interviews, more for calibrating what "good" looks like when hiring architects.',
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Business & Finance",
     name: "Finance for Non-Financial Managers",
     platform: "Coursera",
@@ -89,8 +103,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: "2026-01-05",
     timeToComplete: "6h",
     notes: "Cleared up how R&D spend actually shows up on the income statement.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Business & Finance",
     name: "Reading a P&L Like a CFO",
     platform: "LinkedIn Learning",
@@ -99,8 +115,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: null,
     timeToComplete: "3h",
     notes: "Short course, doing it alongside real board deck reviews.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Business & Finance",
     name: "Startup Financial Modeling",
     platform: "Udemy",
@@ -110,8 +128,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     timeToComplete: "5h",
     notes:
       "Want to be able to build a headcount-vs-runway model without leaning on finance for every draft.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "People Management",
     name: "Radical Candor",
     platform: "Book",
@@ -120,8 +140,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: "2026-03-22",
     timeToComplete: "6h",
     notes: 'Reference this constantly in 1:1s now - especially the "ruinous empathy" trap.',
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "People Management",
     name: "Coaching Skills for Managers",
     platform: "Coursera",
@@ -130,8 +152,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: null,
     timeToComplete: "5h",
     notes: "Practicing the GROW model in skip-levels this quarter.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "People Management",
     name: "Building High-Performing Engineering Cultures",
     platform: "Conference Talk Series",
@@ -140,8 +164,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     lastCompleted: null,
     timeToComplete: "4h",
     notes: "Curated playlist from LeadDev - saved for after the coaching course.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Strategy & Innovation",
     name: "The CTO Playbook",
     platform: "Book",
@@ -151,8 +177,10 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     timeToComplete: "7h",
     notes:
       "Best single overview of the role split (tech strategy vs. delivery vs. people) I've read so far.",
+    userNote: "",
   },
   {
+    goalId: CTO_GOAL_ID,
     category: "Strategy & Innovation",
     name: "Technology Strategy for the C-Suite",
     platform: "Wharton Executive Education",
@@ -162,10 +190,6 @@ const CTO_COURSES: Omit<Course, "goalId">[] = [
     timeToComplete: "18h",
     notes:
       "Executive cohort course - case studies are directly relevant to our build-vs-buy debates.",
+    userNote: "",
   },
 ];
-
-export const NORTHSTAR_COURSES: Course[] = CTO_COURSES.map((course) => ({
-  ...course,
-  goalId: CTO_GOAL_ID,
-}));
