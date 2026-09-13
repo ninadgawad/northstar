@@ -1,9 +1,10 @@
 // Northstar v1 - synthetic seed data.
 // Goal: Become a CTO. Replace with real courses/notes as you go.
+import type { Course } from "./types";
 
-const NORTHSTAR_GOAL = "Become a CTO";
+export const NORTHSTAR_GOAL = "Become a CTO";
 
-const NORTHSTAR_COURSES = [
+export const NORTHSTAR_COURSES: Course[] = [
   {
     category: "Technical Leadership",
     name: "Engineering Leadership: From Manager to Director",
@@ -42,7 +43,8 @@ const NORTHSTAR_COURSES = [
     status: "Completed",
     lastCompleted: "2025-11-02",
     timeToComplete: "40h",
-    notes: "Renewal due 2028. Biggest single time investment so far, worth it for credibility with infra teams.",
+    notes:
+      "Renewal due 2028. Biggest single time investment so far, worth it for credibility with infra teams.",
   },
   {
     category: "Cloud & Systems Architecture",
@@ -52,7 +54,8 @@ const NORTHSTAR_COURSES = [
     status: "In Progress",
     lastCompleted: null,
     timeToComplete: "20h",
-    notes: "Slow read but foundational - want to be able to challenge architecture proposals directly.",
+    notes:
+      "Slow read but foundational - want to be able to challenge architecture proposals directly.",
   },
   {
     category: "Cloud & Systems Architecture",
@@ -72,7 +75,8 @@ const NORTHSTAR_COURSES = [
     status: "Not Started",
     lastCompleted: null,
     timeToComplete: "15h",
-    notes: "Useful less for interviews, more for calibrating what \"good\" looks like when hiring architects.",
+    notes:
+      'Useful less for interviews, more for calibrating what "good" looks like when hiring architects.',
   },
   {
     category: "Business & Finance",
@@ -102,7 +106,8 @@ const NORTHSTAR_COURSES = [
     status: "Not Started",
     lastCompleted: null,
     timeToComplete: "5h",
-    notes: "Want to be able to build a headcount-vs-runway model without leaning on finance for every draft.",
+    notes:
+      "Want to be able to build a headcount-vs-runway model without leaning on finance for every draft.",
   },
   {
     category: "People Management",
@@ -112,7 +117,7 @@ const NORTHSTAR_COURSES = [
     status: "Completed",
     lastCompleted: "2026-03-22",
     timeToComplete: "6h",
-    notes: "Reference this constantly in 1:1s now - especially the \"ruinous empathy\" trap.",
+    notes: 'Reference this constantly in 1:1s now - especially the "ruinous empathy" trap.',
   },
   {
     category: "People Management",
@@ -142,7 +147,8 @@ const NORTHSTAR_COURSES = [
     status: "Completed",
     lastCompleted: "2026-06-30",
     timeToComplete: "7h",
-    notes: "Best single overview of the role split (tech strategy vs. delivery vs. people) I've read so far.",
+    notes:
+      "Best single overview of the role split (tech strategy vs. delivery vs. people) I've read so far.",
   },
   {
     category: "Strategy & Innovation",
@@ -152,6 +158,7 @@ const NORTHSTAR_COURSES = [
     status: "In Progress",
     lastCompleted: null,
     timeToComplete: "18h",
-    notes: "Executive cohort course - case studies are directly relevant to our build-vs-buy debates.",
+    notes:
+      "Executive cohort course - case studies are directly relevant to our build-vs-buy debates.",
   },
 ];
