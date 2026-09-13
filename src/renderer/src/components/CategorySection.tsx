@@ -7,6 +7,7 @@ interface CategorySectionProps {
   courses: Course[];
   activeStatus?: CourseStatus | null;
   onStatusClick?: (status: CourseStatus) => void;
+  onRowClick?: (course: Course) => void;
 }
 
 export default function CategorySection({
@@ -14,6 +15,7 @@ export default function CategorySection({
   courses,
   activeStatus,
   onStatusClick,
+  onRowClick,
 }: CategorySectionProps): JSX.Element {
   return (
     <section className="mb-5">
@@ -21,7 +23,12 @@ export default function CategorySection({
         {category}
       </h2>
       <Card className="overflow-hidden">
-        <CourseTable courses={courses} activeStatus={activeStatus} onStatusClick={onStatusClick} />
+        <CourseTable
+          courses={courses}
+          activeStatus={activeStatus}
+          onStatusClick={onStatusClick}
+          onRowClick={onRowClick}
+        />
       </Card>
     </section>
   );

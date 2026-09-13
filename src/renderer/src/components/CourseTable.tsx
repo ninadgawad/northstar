@@ -18,12 +18,14 @@ interface CourseTableProps {
   courses: Course[];
   activeStatus?: CourseStatus | null;
   onStatusClick?: (status: CourseStatus) => void;
+  onRowClick?: (course: Course) => void;
 }
 
 export default function CourseTable({
   courses,
   activeStatus = null,
   onStatusClick,
+  onRowClick,
 }: CourseTableProps): JSX.Element {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -45,11 +47,13 @@ export default function CourseTable({
         cell: ({ getValue }) => {
           const status = getValue<Course["status"]>();
           return (
-            <StatusBadge
-              status={status}
-              active={activeStatus === status}
-              onClick={onStatusClick}
-            />
+            <span
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex"
+              role="presentation"
+            >
+              <StatusBadge status={status} active={activeStatus === status} onClick={onStatusClick} />
+            </span>
           );
         },
         sortingFn: (a, b) => {
@@ -84,6 +88,7 @@ export default function CourseTable({
             href={row.original.link}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
           >
             View source
@@ -139,7 +144,11 @@ export default function CourseTable({
       </TableHeader>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <TableRow key={row.id}>
+          <TableRow
+            key={row.id}
+            onClick={() => onRowClick?.(row.original)}
+            className={onRowClick ? "cursor-pointer hover:bg-accent/40" : undefined}
+          >
             {row.getVisibleCells().map((cell) => (
               <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
             ))}
