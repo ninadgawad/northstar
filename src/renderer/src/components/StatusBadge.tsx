@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleDashed, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { CourseStatus } from "@/types";
 
 const STATUS_CONFIG: Record<
@@ -11,12 +12,36 @@ const STATUS_CONFIG: Record<
   "Not Started": { icon: CircleDashed, variant: "muted" },
 };
 
-export default function StatusBadge({ status }: { status: CourseStatus }): JSX.Element {
+interface StatusBadgeProps {
+  status: CourseStatus;
+  active?: boolean;
+  onClick?: (status: CourseStatus) => void;
+}
+
+export default function StatusBadge({ status, active, onClick }: StatusBadgeProps): JSX.Element {
   const { icon: Icon, variant } = STATUS_CONFIG[status];
+
+  if (!onClick) {
+    return (
+      <Badge variant={variant}>
+        <Icon className="size-3.5" />
+        {status}
+      </Badge>
+    );
+  }
+
   return (
-    <Badge variant={variant}>
-      <Icon className="size-3.5" />
-      {status}
-    </Badge>
+    <button type="button" onClick={() => onClick(status)} className="rounded-full">
+      <Badge
+        variant={variant}
+        className={cn(
+          "cursor-pointer transition-transform hover:scale-105",
+          active && "ring-2 ring-offset-1 ring-current"
+        )}
+      >
+        <Icon className="size-3.5" />
+        {status}
+      </Badge>
+    </button>
   );
 }

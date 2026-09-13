@@ -11,14 +11,20 @@ import { ArrowUpDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "@/components/StatusBadge";
-import type { Course } from "@/types";
+import type { Course, CourseStatus } from "@/types";
 import { formatDate } from "@/utils";
 
 interface CourseTableProps {
   courses: Course[];
+  activeStatus?: CourseStatus | null;
+  onStatusClick?: (status: CourseStatus) => void;
 }
 
-export default function CourseTable({ courses }: CourseTableProps): JSX.Element {
+export default function CourseTable({
+  courses,
+  activeStatus = null,
+  onStatusClick,
+}: CourseTableProps): JSX.Element {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = useMemo<ColumnDef<Course>[]>(
@@ -36,7 +42,16 @@ export default function CourseTable({ courses }: CourseTableProps): JSX.Element 
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ getValue }) => <StatusBadge status={getValue<Course["status"]>()} />,
+        cell: ({ getValue }) => {
+          const status = getValue<Course["status"]>();
+          return (
+            <StatusBadge
+              status={status}
+              active={activeStatus === status}
+              onClick={onStatusClick}
+            />
+          );
+        },
         sortingFn: (a, b) => {
           const order: Record<Course["status"], number> = {
             "Not Started": 0,
@@ -85,7 +100,7 @@ export default function CourseTable({ courses }: CourseTableProps): JSX.Element 
         ),
       },
     ],
-    []
+    [activeStatus, onStatusClick]
   );
 
   const table = useReactTable({
