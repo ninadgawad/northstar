@@ -46,6 +46,7 @@ export default function AdminView({
     onAddCourse({
       ...values,
       goalId: selectedGoal.id,
+      progress: values.status === "Completed" ? 100 : values.status === "In Progress" ? 50 : 0,
       lastCompleted: values.status === "Completed" ? new Date().toISOString().slice(0, 10) : null,
       userNote: "",
     });

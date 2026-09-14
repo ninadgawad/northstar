@@ -13,6 +13,8 @@ export interface Course {
   platform: string;
   link: string;
   status: CourseStatus;
+  /** 0-100. Kept in sync with status: 100 on Completed, 0 on Not Started. */
+  progress: number;
   lastCompleted: string | null;
   timeToComplete: string;
   notes: string;

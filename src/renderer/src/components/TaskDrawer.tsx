@@ -26,6 +26,7 @@ interface TaskDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusChange: (courseId: number, status: CourseStatus) => void;
+  onProgressChange: (courseId: number, progress: number) => void;
   onSaveNote: (courseId: number, note: string) => void;
 }
 
@@ -34,15 +35,21 @@ export default function TaskDrawer({
   open,
   onOpenChange,
   onStatusChange,
+  onProgressChange,
   onSaveNote,
 }: TaskDrawerProps): JSX.Element {
   const [draftNote, setDraftNote] = useState(course?.userNote ?? "");
   const [justSaved, setJustSaved] = useState(false);
+  const [draftProgress, setDraftProgress] = useState(course?.progress ?? 0);
 
   useEffect(() => {
     setDraftNote(course?.userNote ?? "");
     setJustSaved(false);
   }, [course?.id, course?.userNote]);
+
+  useEffect(() => {
+    setDraftProgress(course?.progress ?? 0);
+  }, [course?.id, course?.progress]);
 
   if (!course) {
     return <></>;
@@ -92,6 +99,31 @@ export default function TaskDrawer({
                 );
               })}
             </div>
+          </section>
+
+          <section className="mt-6">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Progress
+              </h3>
+              <span className="text-sm font-semibold tabular-nums">{draftProgress}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={draftProgress}
+              onChange={(e) => setDraftProgress(Number(e.target.value))}
+              onMouseUp={(e) => onProgressChange(course.id, Number(e.currentTarget.value))}
+              onTouchEnd={(e) => onProgressChange(course.id, Number(e.currentTarget.value))}
+              onKeyUp={(e) => onProgressChange(course.id, Number(e.currentTarget.value))}
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
+              aria-label="Progress percentage"
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Reaches 100% on Completed and 0% on Not Started automatically.
+            </p>
           </section>
 
           <section className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-border bg-secondary/40 p-4">

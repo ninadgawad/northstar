@@ -26,6 +26,7 @@ function createSchema(): void {
       platform TEXT NOT NULL,
       link TEXT NOT NULL,
       status TEXT NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
       lastCompleted TEXT,
       timeToComplete TEXT NOT NULL,
       notes TEXT NOT NULL DEFAULT '',
@@ -33,6 +34,16 @@ function createSchema(): void {
       FOREIGN KEY (goalId) REFERENCES goals(id)
     );
   `);
+}
+
+function migrateSchema(): void {
+  const info = db.exec("PRAGMA table_info(courses)");
+  const columns = info.length ? info[0].values.map((row) => row[1] as string) : [];
+  if (!columns.includes("progress")) {
+    db.run("ALTER TABLE courses ADD COLUMN progress INTEGER NOT NULL DEFAULT 0");
+    db.run("UPDATE courses SET progress = 100 WHERE status = 'Completed'");
+    persist();
+  }
 }
 
 function seedIfEmpty(): void {
@@ -51,8 +62,8 @@ function seedIfEmpty(): void {
 function insertCourse(input: CourseInput): number {
   db.run(
     `INSERT INTO courses
-      (goalId, category, name, platform, link, status, lastCompleted, timeToComplete, notes, userNote)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (goalId, category, name, platform, link, status, progress, lastCompleted, timeToComplete, notes, userNote)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.goalId,
       input.category,
@@ -60,6 +71,7 @@ function insertCourse(input: CourseInput): number {
       input.platform,
       input.link,
       input.status,
+      input.progress,
       input.lastCompleted,
       input.timeToComplete,
       input.notes,
@@ -89,6 +101,7 @@ export async function initDatabase(): Promise<void> {
   if (existsSync(dbPath)) {
     db = new SQL.Database(readFileSync(dbPath));
     createSchema();
+    migrateSchema();
   } else {
     db = new SQL.Database();
     createSchema();

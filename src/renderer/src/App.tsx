@@ -72,18 +72,32 @@ export default function App(): JSX.Element {
     setDrawerOpen(true);
   };
 
-  const handleUpdateCourse = async (id: number, patch: CoursePatch): Promise<void> => {
+  const handleUpdateCourse = async (id: number, patch: CoursePatch): Promise<Course> => {
+    const current = courses.find((c) => c.id === id);
     const finalPatch: CoursePatch = { ...patch };
-    if (patch.status && !("lastCompleted" in patch)) {
-      const current = courses.find((c) => c.id === id);
-      if (patch.status === "Completed" && !current?.lastCompleted) {
+
+    // Keep status and progress in sync: setting one derives the other,
+    // unless the caller already specified both explicitly.
+    if (patch.status !== undefined && patch.progress === undefined) {
+      if (patch.status === "Completed") finalPatch.progress = 100;
+      else if (patch.status === "Not Started") finalPatch.progress = 0;
+    } else if (patch.progress !== undefined && patch.status === undefined) {
+      if (patch.progress >= 100) finalPatch.status = "Completed";
+      else if (patch.progress <= 0) finalPatch.status = "Not Started";
+      else finalPatch.status = "In Progress";
+    }
+
+    if (finalPatch.status && !("lastCompleted" in finalPatch)) {
+      if (finalPatch.status === "Completed" && !current?.lastCompleted) {
         finalPatch.lastCompleted = new Date().toISOString().slice(0, 10);
-      } else if (patch.status === "Not Started") {
+      } else if (finalPatch.status === "Not Started") {
         finalPatch.lastCompleted = null;
       }
     }
+
     const updated = await window.api.courses.update(id, finalPatch);
     setCourses((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    return updated;
   };
 
   const handleAddCourse = async (input: CourseInput): Promise<void> => {
@@ -158,6 +172,7 @@ export default function App(): JSX.Element {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onStatusChange={(id, status) => handleUpdateCourse(id, { status })}
+        onProgressChange={(id, progress) => handleUpdateCourse(id, { progress })}
         onSaveNote={(id, userNote) => handleUpdateCourse(id, { userNote })}
       />
     </div>

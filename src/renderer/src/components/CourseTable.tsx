@@ -66,6 +66,24 @@ export default function CourseTable({
         },
       },
       {
+        accessorKey: "progress",
+        header: "Progress",
+        cell: ({ getValue }) => {
+          const progress = getValue<number>();
+          return (
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
+            </div>
+          );
+        },
+      },
+      {
         accessorKey: "lastCompleted",
         header: "Last Completed",
         cell: ({ getValue }) => (
