@@ -8,6 +8,8 @@ import type { Course, CourseInput, CoursePatch, CourseStatus, Goal } from "@/typ
 
 const SELECTED_GOAL_STORAGE_KEY = "northstar:selectedGoal";
 const SIDEBAR_STORAGE_KEY = "northstar:sidebarCollapsed";
+const FDE_INTRODUCED_KEY = "northstar:seenFdeGoal";
+const FDE_GOAL_ID = "become-a-fde";
 
 function loadJSON<T>(key: string, fallback: T): T {
   try {
@@ -41,9 +43,17 @@ export default function App(): JSX.Element {
       ).flat();
       setGoals(fetchedGoals);
       setCourses(allCourses);
-      setSelectedGoalId((prev) =>
-        fetchedGoals.some((g) => g.id === prev) ? prev : (fetchedGoals[0]?.id ?? "")
-      );
+
+      const hasSeenFde = loadJSON(FDE_INTRODUCED_KEY, false);
+      const fdeGoalExists = fetchedGoals.some((g) => g.id === FDE_GOAL_ID);
+      if (!hasSeenFde && fdeGoalExists) {
+        setSelectedGoalId(FDE_GOAL_ID);
+        localStorage.setItem(FDE_INTRODUCED_KEY, JSON.stringify(true));
+      } else {
+        setSelectedGoalId((prev) =>
+          fetchedGoals.some((g) => g.id === prev) ? prev : (fetchedGoals[0]?.id ?? "")
+        );
+      }
       setLoading(false);
     })();
   }, []);

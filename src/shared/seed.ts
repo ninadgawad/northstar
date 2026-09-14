@@ -5,6 +5,156 @@ export const CTO_GOAL_ID = "become-a-cto";
 
 export const INITIAL_GOALS: Goal[] = [{ id: CTO_GOAL_ID, name: "Become a CTO" }];
 
+export const FDE_GOAL_ID = "become-a-fde";
+
+export const FDE_GOAL: Goal = { id: FDE_GOAL_ID, name: "Become a FDE" };
+
+// Sources researched via web search (Sept 2026): Palantir's original "Forward
+// Deployed Engineer" role, the Awesome-FDE-Roadmap community roadmap, and
+// coverage from Exponent, Salesforce, GeeksforGeeks, and DeepLearning.AI.
+export const FDE_COURSES: CourseInput[] = [
+  {
+    goalId: FDE_GOAL_ID,
+    category: "FDE Fundamentals",
+    name: "Awesome FDE Roadmap",
+    platform: "GitHub (pierpaolo28)",
+    link: "https://github.com/pierpaolo28/Awesome-FDE-Roadmap",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "2h",
+    notes:
+      'Community roadmap to becoming a Forward Deployed Engineer, covering AI agents, enterprise data architecture, and strategic consulting - inspired by the "Delta" role at Palantir, OpenAI, and Scale AI.',
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "FDE Fundamentals",
+    name: "What Is a Forward Deployed Engineer? Complete Guide",
+    platform: "Exponent (Aced)",
+    link: "https://www.tryexponent.com/blog/what-is-a-forward-deployed-engineer",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "1h",
+    notes:
+      "Overview of the role, its origin at Palantir, day-to-day responsibilities, and how it differs from a typical software engineering or solutions architect job.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Data & Analytics Engineering",
+    name: "dbt Fundamentals",
+    platform: "dbt Learn",
+    link: "https://learn.getdbt.com/courses/dbt-fundamentals",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "6h",
+    notes:
+      "Hands-on course on modeling, testing, documentation, and deployment with dbt - core to the data-pipeline work FDEs do on customer sites.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Data & Analytics Engineering",
+    name: "Advanced SQL: Window Functions",
+    platform: "Mode",
+    link: "https://mode.com/blog/most-popular-window-functions-and-how-to-use-them/",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "3h",
+    notes:
+      "Window functions and CTEs came up repeatedly as a named FDE competency - this covers the five most-used window functions with worked examples.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Systems & Architecture",
+    name: "The System Design Primer",
+    platform: "GitHub (donnemartin)",
+    link: "https://github.com/donnemartin/system-design-primer",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "15h",
+    notes:
+      "Large-scale systems design fundamentals - scalability, data pipelines, and tradeoffs FDEs need when standing up custom apps inside a customer's infrastructure.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Applied AI Engineering",
+    name: "AI Agents in LangGraph",
+    platform: "DeepLearning.AI",
+    link: "https://www.deeplearning.ai/courses/ai-agents-in-langgraph",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "2h",
+    notes:
+      "Build agentic AI workflows with LangGraph, including persistence and human-in-the-loop patterns - directly applicable to embedding custom AI solutions with customers.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Applied AI Engineering",
+    name: "Functions, Tools and Agents with LangChain",
+    platform: "DeepLearning.AI",
+    link: "https://www.deeplearning.ai/courses/functions-tools-agents-langchain",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "1h 30m",
+    notes:
+      "Function calling and tool-use patterns for wiring LLMs into real customer systems, taught by LangChain's founder and Andrew Ng.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Client & Communication Skills",
+    name: "Technical Writing One",
+    platform: "Google for Developers",
+    link: "https://developers.google.com/tech-writing/one",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "4h",
+    notes:
+      "Critical basics of clear technical writing - FDEs constantly document integrations and explain technical tradeoffs to non-technical stakeholders.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Client & Communication Skills",
+    name: "Forward Deployed Engineer: 5 Skills for This New Role",
+    platform: "Salesforce Blog",
+    link: "https://www.salesforce.com/blog/forward-deployed-engineer/",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "1h",
+    notes:
+      "Breaks down the communication and business-acumen side of the role - engaging execs and business stakeholders without leaning on jargon.",
+    userNote: "",
+  },
+  {
+    goalId: FDE_GOAL_ID,
+    category: "Career Roadmap",
+    name: "Forward Deployed Engineer: Role, Skills, Salary & Career Roadmap",
+    platform: "GeeksforGeeks",
+    link: "https://www.geeksforgeeks.org/blogs/forward-deployed-engineer-role-skills-salary-roadmap/",
+    status: "Not Started",
+    progress: 0,
+    lastCompleted: null,
+    timeToComplete: "1h 30m",
+    notes:
+      "Structured overview of the FDE career path end to end - useful as a checkpoint to revisit once the other topics here are underway.",
+    userNote: "",
+  },
+];
+
 export const INITIAL_COURSES: CourseInput[] = [
   {
     goalId: CTO_GOAL_ID,

@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { app } from "electron";
 import initSqlJs, { type Database } from "sql.js";
-import { INITIAL_COURSES, INITIAL_GOALS } from "../shared/seed";
+import { FDE_COURSES, FDE_GOAL, INITIAL_COURSES, INITIAL_GOALS } from "../shared/seed";
 import type { Course, CourseInput, CoursePatch, Goal } from "../shared/types";
 
 let db: Database;
@@ -59,6 +59,17 @@ function seedIfEmpty(): void {
   }
 }
 
+function seedFdeGoalIfMissing(): void {
+  const existing = db.exec("SELECT 1 FROM goals WHERE id = ?", [FDE_GOAL.id]);
+  if (existing.length > 0) return;
+
+  db.run("INSERT INTO goals (id, name) VALUES (?, ?)", [FDE_GOAL.id, FDE_GOAL.name]);
+  for (const course of FDE_COURSES) {
+    insertCourse(course);
+  }
+  persist();
+}
+
 function insertCourse(input: CourseInput): number {
   db.run(
     `INSERT INTO courses
@@ -108,6 +119,8 @@ export async function initDatabase(): Promise<void> {
     seedIfEmpty();
     persist();
   }
+
+  seedFdeGoalIfMissing();
 }
 
 export function listGoals(): Goal[] {
