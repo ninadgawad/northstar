@@ -2,13 +2,22 @@ import { useMemo, useState } from "react";
 import { PartyPopper, Play, Timer as TimerIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import StatusBadge from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
+import { formatRelativeDays } from "@/lib/dates";
+import type { NextUpItem } from "@/lib/nextUp";
 import type { Course, Goal } from "@/types";
 import { formatCountdown } from "@/utils";
 
 const DURATIONS = [15, 30, 45, 60] as const;
 
-export type FocusPhase = "idle" | "running" | "done";
+export type FocusPhase = "idle" | "running" | "journal" | "done";
+
+export interface BeginFocusInput {
+  courseId: number | null;
+  task: string;
+}
 
 interface FocusTimerViewProps {
   goals: Goal[];
@@ -16,9 +25,15 @@ interface FocusTimerViewProps {
   phase: FocusPhase;
   remainingMs: number;
   totalMs: number;
-  taskId: number | null;
+  /** Bound course id, or null when focusing on free text. */
+  courseId: number | null;
+  /** Display name: the bound course's name, or the free-text task. */
+  taskText: string;
+  /** Ranked "what to work on" suggestions for the idle view. */
+  nextUp: NextUpItem[];
+  now: number;
   message: string;
-  onBegin: (taskId: number, minutes: number) => void;
+  onBegin: (input: BeginFocusInput, minutes: number) => void;
   onCancel: () => void;
   onDismissDone: () => void;
 }
@@ -29,15 +44,19 @@ export default function FocusTimerView({
   phase,
   remainingMs,
   totalMs,
-  taskId,
+  courseId,
+  taskText,
+  nextUp,
+  now,
   message,
   onBegin,
   onCancel,
   onDismissDone,
 }: FocusTimerViewProps): JSX.Element {
   const [duration, setDuration] = useState<number>(30);
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickedTaskId, setPickedTaskId] = useState<string>("");
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+  const [freeText, setFreeText] = useState("");
+  const [showAltPicker, setShowAltPicker] = useState(false);
 
   const selectableCourses = useMemo(
     () => courses.filter((c) => c.status !== "Completed"),
@@ -53,14 +72,41 @@ export default function FocusTimerView({
       .filter((group) => group.courses.length > 0);
   }, [goals, selectableCourses]);
 
-  const activeTask = courses.find((c) => c.id === taskId) ?? null;
+  const goalName = (goalId: string): string => goals.find((g) => g.id === goalId)?.name ?? goalId;
 
-  const handleBeginClick = (): void => {
-    const id = Number(pickedTaskId);
+  const activeTask = courses.find((c) => c.id === courseId) ?? null;
+  const displayName = activeTask?.name ?? taskText;
+
+  const canStart = selectedCourseId !== null || freeText.trim().length > 0;
+
+  const handleNextUpClick = (id: number): void => {
+    setSelectedCourseId((prev) => (prev === id ? null : id));
+    setFreeText("");
+  };
+
+  const handleFreeTextChange = (value: string): void => {
+    setFreeText(value);
+    if (value.trim().length > 0) setSelectedCourseId(null);
+  };
+
+  const handleAltSelect = (value: string): void => {
+    const id = Number(value);
     if (!id) return;
-    onBegin(id, duration);
-    setShowPicker(false);
-    setPickedTaskId("");
+    setSelectedCourseId(id);
+    setFreeText("");
+  };
+
+  const handleStart = (): void => {
+    if (!canStart) return;
+    if (selectedCourseId !== null) {
+      const course = courses.find((c) => c.id === selectedCourseId);
+      onBegin({ courseId: selectedCourseId, task: course?.name ?? "Untitled task" }, duration);
+    } else {
+      onBegin({ courseId: null, task: freeText.trim() }, duration);
+    }
+    setSelectedCourseId(null);
+    setFreeText("");
+    setShowAltPicker(false);
   };
 
   if (phase === "running") {
@@ -70,7 +116,7 @@ export default function FocusTimerView({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Focusing on
         </p>
-        <h2 className="text-lg font-semibold">{activeTask?.name ?? "Untitled task"}</h2>
+        <h2 className="text-lg font-semibold">{displayName || "Untitled task"}</h2>
 
         <div
           className="relative flex size-56 items-center justify-center rounded-full transition-[background] duration-1000 ease-linear"
@@ -92,20 +138,20 @@ export default function FocusTimerView({
     );
   }
 
-  if (phase === "done") {
+  if (phase === "done" || phase === "journal") {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-20 text-center">
         <div className="flex size-16 items-center justify-center rounded-full bg-success/15 text-success">
           <PartyPopper className="size-8" />
         </div>
         <h2 className="text-lg font-semibold">Focus session complete!</h2>
-        {activeTask && (
+        {displayName && (
           <p className="text-sm text-muted-foreground">
-            You focused on <span className="font-medium text-foreground">{activeTask.name}</span>
+            You focused on <span className="font-medium text-foreground">{displayName}</span>
           </p>
         )}
         <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
-        <Button onClick={onDismissDone}>Start another session</Button>
+        {phase === "done" && <Button onClick={onDismissDone}>Start another session</Button>}
       </div>
     );
   }
@@ -122,52 +168,83 @@ export default function FocusTimerView({
         </p>
       </div>
 
-      {!showPicker ? (
-        <>
-          <div className="grid w-full grid-cols-4 gap-2">
-            {DURATIONS.map((mins) => (
-              <button
-                key={mins}
-                type="button"
-                onClick={() => setDuration(mins)}
-                className={cn(
-                  "rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
-                  duration === mins
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-foreground hover:bg-accent"
-                )}
-              >
-                {mins}
-                <span className="block text-[11px] font-normal opacity-80">min</span>
-              </button>
-            ))}
-          </div>
-          <Button
-            size="lg"
-            className="w-full"
-            disabled={selectableCourses.length === 0}
-            onClick={() => setShowPicker(true)}
+      <div className="grid w-full grid-cols-4 gap-2">
+        {DURATIONS.map((mins) => (
+          <button
+            key={mins}
+            type="button"
+            onClick={() => setDuration(mins)}
+            className={cn(
+              "rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
+              duration === mins
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-foreground hover:bg-accent"
+            )}
           >
-            <Play className="size-4" />
-            Start
-          </Button>
-          {selectableCourses.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No open tasks to focus on yet — add one from a goal's dashboard first.
-            </p>
-          )}
-        </>
+            {mins}
+            <span className="block text-[11px] font-normal opacity-80">min</span>
+          </button>
+        ))}
+      </div>
+
+      {nextUp.length > 0 && (
+        <div className="w-full">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Next up
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {nextUp.map(({ course, lastTouchedAt }) => {
+              const isSelected = selectedCourseId === course.id;
+              return (
+                <button
+                  key={course.id}
+                  type="button"
+                  onClick={() => handleNextUpClick(course.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:bg-accent"
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{course.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {goalName(course.goalId)} · {course.progress}% ·{" "}
+                      {formatRelativeDays(lastTouchedAt, now)}
+                    </p>
+                  </div>
+                  <StatusBadge status={course.status} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="w-full">
+        <Input
+          value={freeText}
+          onChange={(e) => handleFreeTextChange(e.target.value)}
+          placeholder="Or type what you'll work on"
+        />
+      </div>
+
+      {!showAltPicker ? (
+        <button
+          type="button"
+          onClick={() => setShowAltPicker(true)}
+          className="text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
+        >
+          Choose a different topic
+        </button>
       ) : (
         <Card className="w-full">
           <CardContent className="flex flex-col gap-3 p-4">
-            <p className="text-sm font-medium">
-              What are you focusing on for {duration} minutes?
-            </p>
             <select
-              value={pickedTaskId}
-              onChange={(e) => setPickedTaskId(e.target.value)}
+              value={selectedCourseId !== null ? String(selectedCourseId) : ""}
+              onChange={(e) => handleAltSelect(e.target.value)}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              autoFocus
             >
               <option value="" disabled>
                 Choose a task…
@@ -182,17 +259,19 @@ export default function FocusTimerView({
                 </optgroup>
               ))}
             </select>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowPicker(false)}>
-                Back
-              </Button>
-              <Button className="flex-1" disabled={!pickedTaskId} onClick={handleBeginClick}>
-                <Play className="size-3.5" />
-                Begin focus session
-              </Button>
-            </div>
           </CardContent>
         </Card>
+      )}
+
+      <Button size="lg" className="w-full" disabled={!canStart} onClick={handleStart}>
+        <Play className="size-4" />
+        Start
+      </Button>
+      {selectableCourses.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          No open tasks to focus on yet — type what you're working on above, or add one from a
+          goal's dashboard.
+        </p>
       )}
     </div>
   );

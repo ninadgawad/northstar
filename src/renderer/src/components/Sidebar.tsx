@@ -17,6 +17,7 @@ interface SidebarProps {
   activeView: ViewId;
   onNavigate: (view: ViewId) => void;
   focusBadge?: string | null;
+  focusLabel?: string | null;
 }
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
@@ -32,6 +33,7 @@ export default function Sidebar({
   activeView,
   onNavigate,
   focusBadge,
+  focusLabel,
 }: SidebarProps): JSX.Element {
   return (
     <aside
@@ -54,11 +56,12 @@ export default function Sidebar({
         {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
           const isActive = activeView === id;
           const badge = id === "focus" ? focusBadge : null;
+          const label2 = id === "focus" ? focusLabel : null;
           return (
             <button
               key={id}
               type="button"
-              title={badge ? `${label} — ${badge}` : label}
+              title={[label, badge, label2].filter(Boolean).join(" — ")}
               onClick={() => onNavigate(id)}
               className={cn(
                 "relative flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
@@ -75,16 +78,28 @@ export default function Sidebar({
                 )}
               </span>
               {!collapsed && (
-                <span className="flex flex-1 items-center justify-between gap-2">
-                  <span>{label}</span>
-                  {badge && (
+                <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span>{label}</span>
+                    {badge && (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                          isActive ? "bg-primary-foreground/20" : "bg-warning/15 text-warning"
+                        )}
+                      >
+                        {badge}
+                      </span>
+                    )}
+                  </span>
+                  {label2 && (
                     <span
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
-                        isActive ? "bg-primary-foreground/20" : "bg-warning/15 text-warning"
+                        "w-full truncate text-left text-[11px] opacity-80",
+                        isActive ? "text-primary-foreground" : "text-muted-foreground"
                       )}
                     >
-                      {badge}
+                      {label2}
                     </span>
                   )}
                 </span>
