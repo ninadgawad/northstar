@@ -10,11 +10,14 @@ import FocusTimerView, {
 } from "@/components/FocusTimerView";
 import TaskDrawer from "@/components/TaskDrawer";
 import SessionJournalDialog from "@/components/SessionJournalDialog";
+import WeeklyRecapDialog from "@/components/WeeklyRecapDialog";
 import { pickEncouragement } from "@/lib/encouragement";
 import { playAlarm } from "@/lib/sound";
-import { localDayKey } from "@/lib/dates";
+import { localDayKey, previousWeekRange, thisWeekRange, weekKey } from "@/lib/dates";
 import { rankNextUp } from "@/lib/nextUp";
 import { appendSessionNote, formatSessionLine } from "@/lib/journal";
+import { computeStreaks, computeWeekStats } from "@/lib/stats";
+import { buildRecap } from "@/lib/recap";
 import type {
   Course,
   CourseEvent,
@@ -31,6 +34,7 @@ const SELECTED_GOAL_STORAGE_KEY = "northstar:selectedGoal";
 const SIDEBAR_STORAGE_KEY = "northstar:sidebarCollapsed";
 const FDE_INTRODUCED_KEY = "northstar:seenFdeGoal";
 const FDE_GOAL_ID = "become-a-fde";
+const LAST_RECAP_WEEK_KEY = "northstar:lastRecapWeek";
 
 const VIEW_TITLES: Record<ViewId, string> = {
   dashboard: "Dashboard",
@@ -62,6 +66,8 @@ export default function App(): JSX.Element {
     loadJSON(SIDEBAR_STORAGE_KEY, false)
   );
   const [activeView, setActiveView] = useState<ViewId>("dashboard");
+  const [recapOpen, setRecapOpen] = useState(false);
+  const [recapIsAuto, setRecapIsAuto] = useState(false);
 
   const [focusPhase, setFocusPhase] = useState<FocusPhase>("idle");
   const [focusTaskId, setFocusTaskId] = useState<number | null>(null);
@@ -109,6 +115,11 @@ export default function App(): JSX.Element {
           fetchedGoals.some((g) => g.id === prev) ? prev : (fetchedGoals[0]?.id ?? "")
         );
       }
+      if (loadJSON(LAST_RECAP_WEEK_KEY, "") !== weekKey(new Date())) {
+        setRecapIsAuto(true);
+        setRecapOpen(true);
+      }
+
       setLoading(false);
     })();
   }, []);
@@ -341,6 +352,30 @@ export default function App(): JSX.Element {
     }
   };
 
+  const weekStats = useMemo(
+    () => computeWeekStats(sessions, events, thisWeekRange(new Date())),
+    [sessions, events]
+  );
+
+  const recap = useMemo(() => {
+    const referenceNow = new Date();
+    return buildRecap(
+      sessions,
+      events,
+      goals,
+      previousWeekRange(referenceNow),
+      computeStreaks(sessions, referenceNow)
+    );
+  }, [sessions, events, goals]);
+
+  const handleRecapOpenChange = (open: boolean): void => {
+    setRecapOpen(open);
+    if (!open && recapIsAuto) {
+      localStorage.setItem(LAST_RECAP_WEEK_KEY, JSON.stringify(weekKey(new Date())));
+      setRecapIsAuto(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background text-sm text-muted-foreground">
@@ -389,6 +424,11 @@ export default function App(): JSX.Element {
               activeStatus={activeStatus}
               onToggleStatus={handleToggleStatus}
               onRowClick={handleRowClick}
+              weekStats={weekStats}
+              onOpenRecap={() => {
+                setRecapIsAuto(false);
+                setRecapOpen(true);
+              }}
             />
           )}
           {activeView === "roadmap" && (
@@ -452,6 +492,8 @@ export default function App(): JSX.Element {
           onSkip={handleSkipJournal}
         />
       )}
+
+      <WeeklyRecapDialog open={recapOpen} onOpenChange={handleRecapOpenChange} recap={recap} />
     </div>
   );
 }
