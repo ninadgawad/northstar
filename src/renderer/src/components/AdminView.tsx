@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Pencil, Plus, Target, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Plus, Target, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import TopicForm, { type TopicFormValues } from "@/components/TopicForm";
 import StatusBadge from "@/components/StatusBadge";
-import type { Course, CourseInput, CoursePatch, Goal } from "@/types";
+import type { Course, CourseInput, CoursePatch, Goal, GoalPatch } from "@/types";
 import { localDayKey } from "@/lib/dates";
 
 interface AdminViewProps {
@@ -16,6 +16,8 @@ interface AdminViewProps {
   onAddCourse: (input: CourseInput) => void;
   onUpdateCourse: (id: number, patch: CoursePatch) => void;
   onDeleteCourse: (id: number) => void;
+  onUpdateGoal: (id: string, patch: GoalPatch) => void;
+  onMoveCourse: (id: number, direction: "up" | "down") => void;
 }
 
 export default function AdminView({
@@ -26,12 +28,18 @@ export default function AdminView({
   onAddCourse,
   onUpdateCourse,
   onDeleteCourse,
+  onUpdateGoal,
+  onMoveCourse,
 }: AdminViewProps): JSX.Element {
   const [goalName, setGoalName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [addingTopic, setAddingTopic] = useState(false);
 
-  const topicCourses = selectedGoal ? courses.filter((c) => c.goalId === selectedGoal.id) : [];
+  const topicCourses = selectedGoal
+    ? courses
+        .filter((c) => c.goalId === selectedGoal.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+    : [];
   const categories = [...new Set(topicCourses.map((c) => c.category))];
 
   const handleAddGoalSubmit = (e: FormEvent): void => {
@@ -87,14 +95,48 @@ export default function AdminView({
         <div className="space-y-2">
           {goals.map((goal) => (
             <Card key={goal.id}>
-              <CardContent className="flex items-center justify-between p-4">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <div className="flex items-center gap-2.5">
                   <Target className="size-4 text-primary" />
                   <span className="text-sm font-medium">{goal.name}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {courses.filter((c) => c.goalId === goal.id).length} topic(s)
-                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    Started
+                    <Input
+                      type="date"
+                      value={goal.startedAt ?? ""}
+                      onChange={(e) =>
+                        onUpdateGoal(goal.id, { startedAt: e.target.value || null })
+                      }
+                      className="h-7 w-36 text-xs"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    Target
+                    <Input
+                      type="date"
+                      value={goal.targetDate ?? ""}
+                      onChange={(e) =>
+                        onUpdateGoal(goal.id, { targetDate: e.target.value || null })
+                      }
+                      className="h-7 w-36 text-xs"
+                    />
+                  </label>
+                  {goal.targetDate && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Clear target date"
+                      onClick={() => onUpdateGoal(goal.id, { targetDate: null })}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {courses.filter((c) => c.goalId === goal.id).length} topic(s)
+                  </span>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -128,13 +170,19 @@ export default function AdminView({
             </Card>
           )}
 
+          {topicCourses.length > 0 && (
+            <p className="mb-2 text-xs text-muted-foreground">
+              Order is global across categories — it sets the roadmap step order.
+            </p>
+          )}
+
           <div className="space-y-2">
             {topicCourses.length === 0 && !addingTopic && (
               <p className="py-6 text-center text-sm text-muted-foreground">
                 No topics yet for this goal.
               </p>
             )}
-            {topicCourses.map((course) =>
+            {topicCourses.map((course, index) =>
               editingId === course.id ? (
                 <Card key={course.id}>
                   <CardContent className="p-4">
@@ -150,16 +198,39 @@ export default function AdminView({
               ) : (
                 <Card key={course.id}>
                   <CardContent className="flex items-center justify-between gap-3 p-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium">{course.name}</span>
-                        <StatusBadge status={course.status} />
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        {course.category} · {course.platform}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{course.name}</span>
+                          <StatusBadge status={course.status} />
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          {course.category} · {course.platform}
+                        </div>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Move up"
+                        disabled={index === 0}
+                        onClick={() => onMoveCourse(course.id, "up")}
+                      >
+                        <ChevronUp className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Move down"
+                        disabled={index === topicCourses.length - 1}
+                        onClick={() => onMoveCourse(course.id, "down")}
+                      >
+                        <ChevronDown className="size-3.5" />
+                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"
