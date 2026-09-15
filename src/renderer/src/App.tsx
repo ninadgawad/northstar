@@ -1,13 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Sidebar, { type ViewId } from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import DashboardView from "@/components/DashboardView";
 import AdminView from "@/components/AdminView";
-import FocusTimerView, { type FocusPhase } from "@/components/FocusTimerView";
+import FocusTimerView, {
+  type BeginFocusInput,
+  type FocusPhase,
+} from "@/components/FocusTimerView";
 import TaskDrawer from "@/components/TaskDrawer";
+import SessionJournalDialog from "@/components/SessionJournalDialog";
 import { pickEncouragement } from "@/lib/encouragement";
 import { playAlarm } from "@/lib/sound";
 import { localDayKey } from "@/lib/dates";
+import { rankNextUp } from "@/lib/nextUp";
+import { appendSessionNote, formatSessionLine } from "@/lib/journal";
 import type {
   Course,
   CourseEvent,
@@ -50,7 +56,9 @@ export default function App(): JSX.Element {
 
   const [focusPhase, setFocusPhase] = useState<FocusPhase>("idle");
   const [focusTaskId, setFocusTaskId] = useState<number | null>(null);
+  const [focusTaskText, setFocusTaskText] = useState("");
   const [focusEndAt, setFocusEndAt] = useState<number | null>(null);
+  const [focusEndedAt, setFocusEndedAt] = useState<number | null>(null);
   const [focusTotalMs, setFocusTotalMs] = useState(0);
   const [focusStartedAt, setFocusStartedAt] = useState<number | null>(null);
   const [focusMessage, setFocusMessage] = useState("");
@@ -64,6 +72,8 @@ export default function App(): JSX.Element {
   // session (e.g. a React re-render after `courses` changes).
   const focusSeq = useRef(0);
   const completedSeq = useRef(0);
+
+  const nextUp = useMemo(() => rankNextUp(courses, sessions), [courses, sessions]);
 
   useEffect(() => {
     (async () => {
@@ -108,17 +118,17 @@ export default function App(): JSX.Element {
     return () => clearInterval(id);
   }, [focusPhase]);
 
-  /** Records one focus_sessions row. Task/goal are snapshotted from `courses` at record time. */
+  /** Records one focus_sessions row. Task/goal are snapshotted at record time. */
   const recordSession = (completed: boolean, endedAtMs: number, minutesOverride?: number): void => {
-    if (focusStartedAt === null || focusTaskId === null) return;
-    const task = courses.find((c) => c.id === focusTaskId);
+    if (focusStartedAt === null) return;
+    const boundCourse = focusTaskId !== null ? courses.find((c) => c.id === focusTaskId) : null;
     const minutes = minutesOverride ?? Math.round((endedAtMs - focusStartedAt) / 60_000);
     if (!completed && minutes < 1) return;
     void window.api.sessions
       .add({
-        goalId: task?.goalId ?? "",
+        goalId: boundCourse?.goalId ?? selectedGoalId,
         courseId: focusTaskId,
-        task: task?.name ?? "Untitled task",
+        task: boundCourse?.name ?? (focusTaskText || "Untitled task"),
         minutes,
         startedAt: new Date(focusStartedAt).toISOString(),
         endedAt: new Date(endedAtMs).toISOString(),
@@ -133,11 +143,14 @@ export default function App(): JSX.Element {
     completedSeq.current = focusSeq.current;
 
     const plannedEnd = focusEndAt;
+    const boundCourseStillExists =
+      focusTaskId !== null && courses.some((c) => c.id === focusTaskId);
     playAlarm();
     setFocusMessage(pickEncouragement());
-    setFocusPhase("done");
     setFocusEndAt(null);
+    setFocusEndedAt(plannedEnd);
     recordSession(true, plannedEnd, Math.round(focusTotalMs / 60_000));
+    setFocusPhase(boundCourseStillExists ? "journal" : "done");
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       const task = courses.find((c) => c.id === focusTaskId);
       new Notification("Focus session complete! 🎉", {
@@ -147,13 +160,14 @@ export default function App(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, focusPhase, focusEndAt, focusTaskId, courses]);
 
-  const handleBeginFocusSession = (taskId: number, minutes: number): void => {
+  const handleBeginFocusSession = (input: BeginFocusInput, minutes: number): void => {
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       void Notification.requestPermission();
     }
     const totalMs = minutes * 60_000;
     focusSeq.current += 1;
-    setFocusTaskId(taskId);
+    setFocusTaskId(input.courseId);
+    setFocusTaskText(input.task);
     setFocusTotalMs(totalMs);
     setFocusStartedAt(Date.now());
     setFocusEndAt(Date.now() + totalMs);
@@ -166,14 +180,49 @@ export default function App(): JSX.Element {
     setFocusPhase("idle");
     setFocusEndAt(null);
     setFocusTaskId(null);
+    setFocusTaskText("");
     setFocusStartedAt(null);
   };
 
   const handleDismissFocusDone = (): void => {
     setFocusPhase("idle");
     setFocusTaskId(null);
+    setFocusTaskText("");
     setFocusStartedAt(null);
+    setFocusEndedAt(null);
     setFocusMessage("");
+  };
+
+  const journalCourse =
+    focusPhase === "journal" && focusTaskId !== null
+      ? (courses.find((c) => c.id === focusTaskId) ?? null)
+      : null;
+
+  const handleSaveJournal = async (result: {
+    text: string;
+    progress: number | null;
+  }): Promise<void> => {
+    const course = journalCourse;
+    if (!course || focusEndedAt === null) {
+      handleDismissFocusDone();
+      return;
+    }
+    const minutes = Math.round(focusTotalMs / 60_000);
+    const patch: CoursePatch = {};
+    if (result.text) {
+      const line = formatSessionLine(new Date(focusEndedAt), minutes, result.text);
+      patch.userNote = appendSessionNote(course.userNote, line);
+    }
+    if (result.progress !== null) {
+      patch.progress = result.progress;
+    }
+    patch.updatedAt = new Date().toISOString();
+    await handleUpdateCourse(course.id, patch);
+    handleDismissFocusDone();
+  };
+
+  const handleSkipJournal = (): void => {
+    handleDismissFocusDone();
   };
 
   const handleAddGoal = async (name: string): Promise<void> => {
@@ -256,6 +305,12 @@ export default function App(): JSX.Element {
       setDrawerOpen(false);
       setSelectedCourseId(null);
     }
+    if (focusTaskId === id) {
+      // The bound course is gone; the timer degrades to a free-text task
+      // using the name it already snapshotted.
+      setFocusTaskId(null);
+      if (focusPhase === "journal") setFocusPhase("done");
+    }
   };
 
   if (loading) {
@@ -274,6 +329,7 @@ export default function App(): JSX.Element {
   const focusBadge = focusPhase === "running" && focusEndAt !== null
     ? formatCountdown(focusEndAt - now)
     : null;
+  const focusLabel = focusPhase === "running" ? focusTaskText || null : null;
   const viewTitle =
     activeView === "dashboard" ? "Dashboard" : activeView === "focus" ? "Focus Timer" : "Admin";
 
@@ -285,6 +341,7 @@ export default function App(): JSX.Element {
         activeView={activeView}
         onNavigate={setActiveView}
         focusBadge={focusBadge}
+        focusLabel={focusLabel}
       />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -314,7 +371,10 @@ export default function App(): JSX.Element {
               phase={focusPhase}
               remainingMs={focusEndAt !== null ? Math.max(0, focusEndAt - now) : 0}
               totalMs={focusTotalMs}
-              taskId={focusTaskId}
+              courseId={focusTaskId}
+              taskText={focusTaskText}
+              nextUp={nextUp}
+              now={now}
               message={focusMessage}
               onBegin={handleBeginFocusSession}
               onCancel={handleCancelFocusSession}
@@ -343,6 +403,18 @@ export default function App(): JSX.Element {
         onProgressChange={(id, progress) => handleUpdateCourse(id, { progress })}
         onSaveNote={(id, userNote) => handleUpdateCourse(id, { userNote })}
       />
+
+      {journalCourse && focusEndedAt !== null && (
+        <SessionJournalDialog
+          key={focusEndedAt}
+          open={focusPhase === "journal"}
+          course={journalCourse}
+          minutes={Math.round(focusTotalMs / 60_000)}
+          endedAt={focusEndedAt}
+          onSave={handleSaveJournal}
+          onSkip={handleSkipJournal}
+        />
+      )}
     </div>
   );
 }

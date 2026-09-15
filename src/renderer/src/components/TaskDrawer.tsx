@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleDashed, Clock, ExternalLink, NotebookPen, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,11 +41,44 @@ export default function TaskDrawer({
   const [draftNote, setDraftNote] = useState(course?.userNote ?? "");
   const [justSaved, setJustSaved] = useState(false);
   const [draftProgress, setDraftProgress] = useState(course?.progress ?? 0);
+  // The note this draft was built from — lets an external change (e.g. a
+  // session-journal append) merge into the draft instead of clobbering it.
+  const baseNoteRef = useRef(course?.userNote ?? "");
 
   useEffect(() => {
     setDraftNote(course?.userNote ?? "");
+    baseNoteRef.current = course?.userNote ?? "";
     setJustSaved(false);
-  }, [course?.id, course?.userNote]);
+    // Reset whenever a different course is opened. Intentionally excludes
+    // course?.userNote — that's handled by the merge effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.id]);
+
+  useEffect(() => {
+    const newNote = course?.userNote ?? "";
+    const base = baseNoteRef.current;
+    if (newNote === base) return; // no external change
+
+    setDraftNote((draft) => {
+      const isDirty = draft !== base;
+      if (!isDirty) {
+        // Draft matched the old note exactly — safe to just take the new one.
+        return newNote;
+      }
+      if (newNote.startsWith(base)) {
+        // The external change was a pure append (e.g. a journaled session
+        // line) — carry the user's unsaved edits forward and append the
+        // new tail so nothing is lost either way.
+        return draft + newNote.slice(base.length);
+      }
+      // Unrelated external change (e.g. another device) — can't merge
+      // safely, so fall back to the incoming note.
+      return newNote;
+    });
+    baseNoteRef.current = newNote;
+    setJustSaved(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.userNote]);
 
   useEffect(() => {
     setDraftProgress(course?.progress ?? 0);
