@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import TopicForm, { type TopicFormValues } from "@/components/TopicForm";
 import StatusBadge from "@/components/StatusBadge";
 import type { Course, CourseInput, CoursePatch, Goal } from "@/types";
+import { localDayKey } from "@/lib/dates";
 
 interface AdminViewProps {
   goals: Goal[];
@@ -47,7 +48,7 @@ export default function AdminView({
       ...values,
       goalId: selectedGoal.id,
       progress: values.status === "Completed" ? 100 : values.status === "In Progress" ? 50 : 0,
-      lastCompleted: values.status === "Completed" ? new Date().toISOString().slice(0, 10) : null,
+      lastCompleted: values.status === "Completed" ? localDayKey(new Date()) : null,
       userNote: "",
     });
     setAddingTopic(false);

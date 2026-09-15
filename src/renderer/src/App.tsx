@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar, { type ViewId } from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import DashboardView from "@/components/DashboardView";
@@ -7,7 +7,16 @@ import FocusTimerView, { type FocusPhase } from "@/components/FocusTimerView";
 import TaskDrawer from "@/components/TaskDrawer";
 import { pickEncouragement } from "@/lib/encouragement";
 import { playAlarm } from "@/lib/sound";
-import type { Course, CourseInput, CoursePatch, CourseStatus, Goal } from "@/types";
+import { localDayKey } from "@/lib/dates";
+import type {
+  Course,
+  CourseEvent,
+  CourseInput,
+  CoursePatch,
+  CourseStatus,
+  FocusSession,
+  Goal,
+} from "@/types";
 import { formatCountdown } from "@/utils";
 
 const SELECTED_GOAL_STORAGE_KEY = "northstar:selectedGoal";
@@ -43,17 +52,33 @@ export default function App(): JSX.Element {
   const [focusTaskId, setFocusTaskId] = useState<number | null>(null);
   const [focusEndAt, setFocusEndAt] = useState<number | null>(null);
   const [focusTotalMs, setFocusTotalMs] = useState(0);
+  const [focusStartedAt, setFocusStartedAt] = useState<number | null>(null);
   const [focusMessage, setFocusMessage] = useState("");
   const [now, setNow] = useState(() => Date.now());
 
+  // Activity log (focus sessions + status/progress transitions), shared by the
+  // Streaks, Roadmap, and Smart Focus features.
+  const [sessions, setSessions] = useState<FocusSession[]>([]);
+  const [events, setEvents] = useState<CourseEvent[]>([]);
+  // Guards the timer-completion effect against firing twice for the same
+  // session (e.g. a React re-render after `courses` changes).
+  const focusSeq = useRef(0);
+  const completedSeq = useRef(0);
+
   useEffect(() => {
     (async () => {
-      const fetchedGoals = await window.api.goals.list();
+      const [fetchedGoals, fetchedSessions, fetchedEvents] = await Promise.all([
+        window.api.goals.list(),
+        window.api.sessions.list(),
+        window.api.events.list(),
+      ]);
       const allCourses = (
         await Promise.all(fetchedGoals.map((g) => window.api.courses.list(g.id)))
       ).flat();
       setGoals(fetchedGoals);
       setCourses(allCourses);
+      setSessions(fetchedSessions);
+      setEvents(fetchedEvents);
 
       const hasSeenFde = loadJSON(FDE_INTRODUCED_KEY, false);
       const fdeGoalExists = fetchedGoals.some((g) => g.id === FDE_GOAL_ID);
@@ -83,18 +108,43 @@ export default function App(): JSX.Element {
     return () => clearInterval(id);
   }, [focusPhase]);
 
+  /** Records one focus_sessions row. Task/goal are snapshotted from `courses` at record time. */
+  const recordSession = (completed: boolean, endedAtMs: number, minutesOverride?: number): void => {
+    if (focusStartedAt === null || focusTaskId === null) return;
+    const task = courses.find((c) => c.id === focusTaskId);
+    const minutes = minutesOverride ?? Math.round((endedAtMs - focusStartedAt) / 60_000);
+    if (!completed && minutes < 1) return;
+    void window.api.sessions
+      .add({
+        goalId: task?.goalId ?? "",
+        courseId: focusTaskId,
+        task: task?.name ?? "Untitled task",
+        minutes,
+        startedAt: new Date(focusStartedAt).toISOString(),
+        endedAt: new Date(endedAtMs).toISOString(),
+        completed,
+      })
+      .then((s) => setSessions((prev) => [...prev, s]));
+  };
+
   useEffect(() => {
     if (focusPhase !== "running" || focusEndAt === null || now < focusEndAt) return;
+    if (completedSeq.current === focusSeq.current) return;
+    completedSeq.current = focusSeq.current;
+
+    const plannedEnd = focusEndAt;
     playAlarm();
     setFocusMessage(pickEncouragement());
     setFocusPhase("done");
     setFocusEndAt(null);
+    recordSession(true, plannedEnd, Math.round(focusTotalMs / 60_000));
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       const task = courses.find((c) => c.id === focusTaskId);
       new Notification("Focus session complete! 🎉", {
         body: task ? `You focused on "${task.name}". Nice work!` : "Nice work!",
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, focusPhase, focusEndAt, focusTaskId, courses]);
 
   const handleBeginFocusSession = (taskId: number, minutes: number): void => {
@@ -102,21 +152,27 @@ export default function App(): JSX.Element {
       void Notification.requestPermission();
     }
     const totalMs = minutes * 60_000;
+    focusSeq.current += 1;
     setFocusTaskId(taskId);
     setFocusTotalMs(totalMs);
+    setFocusStartedAt(Date.now());
     setFocusEndAt(Date.now() + totalMs);
     setFocusPhase("running");
   };
 
   const handleCancelFocusSession = (): void => {
+    completedSeq.current = focusSeq.current;
+    recordSession(false, Date.now());
     setFocusPhase("idle");
     setFocusEndAt(null);
     setFocusTaskId(null);
+    setFocusStartedAt(null);
   };
 
   const handleDismissFocusDone = (): void => {
     setFocusPhase("idle");
     setFocusTaskId(null);
+    setFocusStartedAt(null);
     setFocusMessage("");
   };
 
@@ -153,14 +209,38 @@ export default function App(): JSX.Element {
 
     if (finalPatch.status && !("lastCompleted" in finalPatch)) {
       if (finalPatch.status === "Completed" && !current?.lastCompleted) {
-        finalPatch.lastCompleted = new Date().toISOString().slice(0, 10);
+        finalPatch.lastCompleted = localDayKey(new Date());
       } else if (finalPatch.status === "Not Started") {
         finalPatch.lastCompleted = null;
       }
     }
 
+    // Stamp "last touched" for any learning-relevant change (not a link/platform rename).
+    if (
+      !("updatedAt" in finalPatch) &&
+      ("status" in patch || "progress" in patch || "userNote" in patch)
+    ) {
+      finalPatch.updatedAt = new Date().toISOString();
+    }
+
     const updated = await window.api.courses.update(id, finalPatch);
     setCourses((prev) => prev.map((c) => (c.id === id ? updated : c)));
+
+    if (current && (current.status !== updated.status || current.progress !== updated.progress)) {
+      void window.api.events
+        .add({
+          courseId: id,
+          goalId: updated.goalId,
+          courseName: updated.name,
+          fromStatus: current.status,
+          toStatus: updated.status,
+          fromProgress: current.progress,
+          toProgress: updated.progress,
+          at: new Date().toISOString(),
+        })
+        .then((ev) => setEvents((prev) => [...prev, ev]));
+    }
+
     return updated;
   };
 
@@ -187,7 +267,9 @@ export default function App(): JSX.Element {
   }
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId) ?? null;
-  const goalCourses = courses.filter((c) => c.goalId === selectedGoalId);
+  const goalCourses = courses
+    .filter((c) => c.goalId === selectedGoalId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
   const selectedGoal = goals.find((g) => g.id === selectedGoalId);
   const focusBadge = focusPhase === "running" && focusEndAt !== null
     ? formatCountdown(focusEndAt - now)

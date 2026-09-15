@@ -3,11 +3,18 @@ import type { CourseInput, Goal } from "./types";
 
 export const CTO_GOAL_ID = "become-a-cto";
 
-export const INITIAL_GOALS: Goal[] = [{ id: CTO_GOAL_ID, name: "Become a CTO" }];
+export const INITIAL_GOALS: Goal[] = [
+  { id: CTO_GOAL_ID, name: "Become a CTO", targetDate: null, startedAt: null },
+];
 
 export const FDE_GOAL_ID = "become-a-fde";
 
-export const FDE_GOAL: Goal = { id: FDE_GOAL_ID, name: "Become a FDE" };
+export const FDE_GOAL: Goal = {
+  id: FDE_GOAL_ID,
+  name: "Become a FDE",
+  targetDate: null,
+  startedAt: null,
+};
 
 // Sources researched via web search (Sept 2026): Palantir's original "Forward
 // Deployed Engineer" role, the Awesome-FDE-Roadmap community roadmap, and
