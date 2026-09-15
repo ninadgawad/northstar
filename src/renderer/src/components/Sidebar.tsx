@@ -3,12 +3,13 @@ import {
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
+  Route,
   ShieldCheck,
   Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ViewId = "dashboard" | "focus" | "admin";
+export type ViewId = "dashboard" | "roadmap" | "focus" | "admin";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -20,6 +21,7 @@ interface SidebarProps {
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "roadmap", label: "Roadmap", icon: Route },
   { id: "focus", label: "Focus Timer", icon: Timer },
   { id: "admin", label: "Admin", icon: ShieldCheck },
 ];

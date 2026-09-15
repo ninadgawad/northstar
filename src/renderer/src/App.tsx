@@ -3,6 +3,7 @@ import Sidebar, { type ViewId } from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import DashboardView from "@/components/DashboardView";
 import AdminView from "@/components/AdminView";
+import RoadmapView from "@/components/RoadmapView";
 import FocusTimerView, { type FocusPhase } from "@/components/FocusTimerView";
 import TaskDrawer from "@/components/TaskDrawer";
 import { pickEncouragement } from "@/lib/encouragement";
@@ -16,6 +17,7 @@ import type {
   CourseStatus,
   FocusSession,
   Goal,
+  GoalPatch,
 } from "@/types";
 import { formatCountdown } from "@/utils";
 
@@ -23,6 +25,13 @@ const SELECTED_GOAL_STORAGE_KEY = "northstar:selectedGoal";
 const SIDEBAR_STORAGE_KEY = "northstar:sidebarCollapsed";
 const FDE_INTRODUCED_KEY = "northstar:seenFdeGoal";
 const FDE_GOAL_ID = "become-a-fde";
+
+const VIEW_TITLES: Record<ViewId, string> = {
+  dashboard: "Dashboard",
+  roadmap: "Roadmap",
+  focus: "Focus Timer",
+  admin: "Admin",
+};
 
 function loadJSON<T>(key: string, fallback: T): T {
   try {
@@ -244,6 +253,25 @@ export default function App(): JSX.Element {
     return updated;
   };
 
+  const handleUpdateGoal = async (id: string, patch: GoalPatch): Promise<void> => {
+    const updated = await window.api.goals.update(id, patch);
+    setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
+  };
+
+  const handleMoveCourse = (id: number, direction: "up" | "down"): void => {
+    const course = courses.find((c) => c.id === id);
+    if (!course) return;
+    const siblings = courses
+      .filter((c) => c.goalId === course.goalId)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const index = siblings.findIndex((c) => c.id === id);
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= siblings.length) return;
+    const sibling = siblings[swapIndex];
+    void handleUpdateCourse(course.id, { sortOrder: sibling.sortOrder });
+    void handleUpdateCourse(sibling.id, { sortOrder: course.sortOrder });
+  };
+
   const handleAddCourse = async (input: CourseInput): Promise<void> => {
     const created = await window.api.courses.add(input);
     setCourses((prev) => [...prev, created]);
@@ -274,8 +302,7 @@ export default function App(): JSX.Element {
   const focusBadge = focusPhase === "running" && focusEndAt !== null
     ? formatCountdown(focusEndAt - now)
     : null;
-  const viewTitle =
-    activeView === "dashboard" ? "Dashboard" : activeView === "focus" ? "Focus Timer" : "Admin";
+  const viewTitle = VIEW_TITLES[activeView];
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
@@ -307,6 +334,14 @@ export default function App(): JSX.Element {
               onRowClick={handleRowClick}
             />
           )}
+          {activeView === "roadmap" && (
+            <RoadmapView
+              goal={selectedGoal}
+              courses={goalCourses}
+              onTopicClick={handleRowClick}
+              onGoToAdmin={() => setActiveView("admin")}
+            />
+          )}
           {activeView === "focus" && (
             <FocusTimerView
               goals={goals}
@@ -330,6 +365,8 @@ export default function App(): JSX.Element {
               onAddCourse={handleAddCourse}
               onUpdateCourse={handleUpdateCourse}
               onDeleteCourse={handleDeleteCourse}
+              onUpdateGoal={handleUpdateGoal}
+              onMoveCourse={handleMoveCourse}
             />
           )}
         </main>
