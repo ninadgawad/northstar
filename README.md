@@ -1,5 +1,8 @@
 # Northstar
 
+[![CI](https://github.com/ninadgawad/northstar/actions/workflows/ci.yml/badge.svg)](https://github.com/ninadgawad/northstar/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Learn with purpose. Build with intention. Move toward your North Star.
 
 A personal learning & growth tracker, now a TypeScript desktop app (Electron
@@ -60,3 +63,13 @@ npm run dist    # package as a distributable desktop app
 Course notes ("My notes" in the task drawer) and status changes are written
 straight to SQLite; UI-only preferences (selected goal, sidebar collapsed
 state) stay in `localStorage`.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities privately per
+[SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Ninad Gawad
